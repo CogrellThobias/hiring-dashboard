@@ -1,0 +1,59 @@
+name: Refresh Hiring System Dashboard
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub Actions cron has ~5-15 min jitter on free runners,
+    # but auto-refresh meta tag in HTML reloads every 10 min so users always see
+    # the latest committed version.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # Manual trigger from Actions UI
+  push:
+    branches: [ main ]
+    paths:
+      - 'template.html'
+      - 'scripts/**'
+      - '.github/workflows/refresh.yml'
+
+# Prevent multiple concurrent runs from racing on the same commit
+concurrency:
+  group: refresh-dashboard
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # commit generated HTML back to repo
+  pages: write
+  id-token: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate dashboard HTML
+        env:
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+        run: python scripts/generate.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain docs/)" ]]; then
+            git add docs/
+            git commit -m "chore: refresh dashboard $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✓ Dashboard updated and committed"
+          else
+            echo "✓ No data changes — skipping commit"
+          fi
