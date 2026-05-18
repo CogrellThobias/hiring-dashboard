@@ -14,7 +14,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -219,6 +219,9 @@ def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
     ]
     q2_open.sort(key=lambda x: x["close"])
 
+    # ---- Pipe movement: deals created today, last 7d, last 30d ----
+    pipe_movement = compute_pipe_movement(deals)
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "q2_target": Q2_TARGET,
@@ -228,6 +231,52 @@ def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
         "stages": stages,
         "q2_open_deals": q2_open,
         "insights": INSIGHTS_SNAPSHOT,
+        "pipe_movement": pipe_movement,
+    }
+
+
+def compute_pipe_movement(deals: list[dict]) -> dict:
+    """Count HS deals by createdate: today, this 7 days vs prev 7, this 30 days vs prev 30."""
+    now = datetime.now(timezone.utc)
+    today_start    = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago       = now - timedelta(days=7)
+    two_weeks_ago  = now - timedelta(days=14)
+    month_ago      = now - timedelta(days=30)
+    two_months_ago = now - timedelta(days=60)
+
+    def parse(s: str | None) -> datetime | None:
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    today = wk_curr = wk_prev = mo_curr = mo_prev = 0
+    for d in deals:
+        created = parse(d["properties"].get("createdate"))
+        if not created:
+            continue
+        if created >= today_start:
+            today += 1
+        if created >= week_ago:
+            wk_curr += 1
+        elif created >= two_weeks_ago:
+            wk_prev += 1
+        if created >= month_ago:
+            mo_curr += 1
+        elif created >= two_months_ago:
+            mo_prev += 1
+
+    def delta_pct(curr: int, prev: int) -> int | None:
+        if prev == 0:
+            return None
+        return round((curr - prev) / prev * 100)
+
+    return {
+        "today": today,
+        "week":  {"current": wk_curr, "previous": wk_prev, "delta_pct": delta_pct(wk_curr, wk_prev)},
+        "month": {"current": mo_curr, "previous": mo_prev, "delta_pct": delta_pct(mo_curr, mo_prev)},
     }
 
 

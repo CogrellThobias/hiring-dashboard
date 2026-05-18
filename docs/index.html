@@ -111,9 +111,10 @@
   .main { display: grid; grid-template-columns: 1.35fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 22px; min-height: 0; }
   .hero       { grid-column: 1; grid-row: 1; }
   .next-close { grid-column: 1; grid-row: 2; }
-  .logos      { grid-column: 2; grid-row: 1 / span 2; }
+  .logos      { grid-column: 2; grid-row: 1; }
+  .insights   { grid-column: 2; grid-row: 2; }
   .pipeline   { grid-column: 3; grid-row: 1; }
-  .insights   { grid-column: 3; grid-row: 2; }
+  .pipemove   { grid-column: 3; grid-row: 2; }
   .glass {
     background: var(--surface);
     backdrop-filter: blur(40px) saturate(160%);
@@ -156,6 +157,19 @@
   .legend-item.jobs .swatch  { background: var(--coral-900); }
   .legend-item.hires .swatch { background: var(--grey-800); }
   .legend-item strong { font-family: var(--serif); font-size: 15px; font-weight: 500; color: var(--text); margin-left: 4px; letter-spacing: -0.02em; }
+
+  /* Pipe movement */
+  .pm-grid { display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: space-around; }
+  .pm-stat { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 14px; }
+  .pm-num { font-family: var(--serif); font-size: 36px; font-weight: 500; line-height: 1; letter-spacing: -0.03em; color: var(--text); min-width: 48px; text-align: left; }
+  .pm-meta { display: flex; flex-direction: column; gap: 3px; }
+  .pm-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); font-weight: 600; }
+  .pm-sub { font-size: 10px; color: var(--text-soft); font-weight: 500; letter-spacing: 0.02em; }
+  .pm-delta { font-family: var(--sans); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; letter-spacing: 0.02em; white-space: nowrap; }
+  .pm-delta.up   { color: #2a7a40;          background: rgba(74, 222, 128, 0.18); }
+  .pm-delta.down { color: var(--coral-900); background: rgba(255, 108, 159, 0.14); }
+  .pm-delta.flat { color: var(--text-muted); background: rgba(106, 104, 98, 0.1); }
+
   .deal-list { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
   .deal-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 14px; padding: 10px 14px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 12px; }
   .deal-row .deal-main { min-width: 0; }
@@ -172,14 +186,14 @@
   .deal-total .v { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .deal-total #dealTotal { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--coral-900); line-height: 1; }
   .deal-total .deal-total-sub { font-family: var(--sans); font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
-  .logo-list { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow: hidden; }
-  .logo-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 14px; transition: all 0.3s ease; }
+  .logo-list { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow: hidden; }
+  .logo-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 12px; transition: all 0.3s ease; }
   .logo-row:hover { background: rgba(255, 255, 255, 0.75); transform: translateX(2px); }
-  .logo-row .rank { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--coral-900); font-weight: 500; text-align: center; line-height: 1; }
-  .logo-row .name { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
-  .logo-row .meta-sm { font-size: 11px; color: var(--text-muted); margin-top: 3px; letter-spacing: 0.02em; font-weight: 500; }
-  .logo-row .arr { font-family: var(--serif); font-size: 19px; font-weight: 500; color: var(--text); text-align: right; letter-spacing: -0.02em; line-height: 1; }
-  .logo-row .arr small { font-family: var(--sans); font-size: 10px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+  .logo-row .rank { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--coral-900); font-weight: 500; text-align: center; line-height: 1; }
+  .logo-row .name { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .logo-row .meta-sm { font-size: 10px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.02em; font-weight: 500; }
+  .logo-row .arr { font-family: var(--serif); font-size: 16px; font-weight: 500; color: var(--text); text-align: right; letter-spacing: -0.02em; line-height: 1; }
+  .logo-row .arr small { font-family: var(--sans); font-size: 9px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; display: block; margin-top: 3px; }
   .logo-total, .pipe-total { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-strong); display: flex; justify-content: space-between; align-items: baseline; }
   .logo-total .l, .pipe-total .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-muted); font-weight: 600; }
   .logo-total .v { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
@@ -408,6 +422,39 @@
         <canvas id="insightsCanvas"></canvas>
       </div>
     </div>
+
+    <div class="glass pipemove">
+      <div class="card-head">
+        <div class="card-title">Pipe Movement</div>
+        <div class="pill">HS deals created</div>
+      </div>
+      <div class="pm-grid">
+        <div class="pm-stat">
+          <div class="pm-num" id="pmToday">0</div>
+          <div class="pm-meta">
+            <div class="pm-label">Today</div>
+            <div class="pm-sub" id="pmTodaySub">New deals entered pipeline</div>
+          </div>
+          <span></span>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-num" id="pmWeek">0</div>
+          <div class="pm-meta">
+            <div class="pm-label">Week over Week</div>
+            <div class="pm-sub" id="pmWeekSub">—</div>
+          </div>
+          <span class="pm-delta flat" id="pmWeekDelta">—</span>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-num" id="pmMonth">0</div>
+          <div class="pm-meta">
+            <div class="pm-label">Month over Month</div>
+            <div class="pm-sub" id="pmMonthSub">—</div>
+          </div>
+          <span class="pm-delta flat" id="pmMonthDelta">—</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <footer>
@@ -457,7 +504,7 @@ if (localStorage.getItem(STORAGE_KEY) === AUTH_HASH) {
 
 // =========== INJECTED DATA ===========
 const DATA = {
-  "generated_at": "2026-05-18T20:24:20.357269+00:00",
+  "generated_at": "2026-05-18T20:42:46.856049+00:00",
   "q2_target": 15,
   "q2_won": 0,
   "q2_lost": 10,
@@ -547,6 +594,19 @@ const DATA = {
       10,
       4
     ]
+  },
+  "pipe_movement": {
+    "today": 3,
+    "week": {
+      "current": 3,
+      "previous": 5,
+      "delta_pct": -40
+    },
+    "month": {
+      "current": 26,
+      "previous": 13,
+      "delta_pct": 100
+    }
   }
 };
 // =====================================
@@ -682,6 +742,27 @@ new Chart(insightsCtx, {
     },
   },
 });
+
+// Pipe Movement
+const pm = DATA.pipe_movement || {today: 0, week: {current:0, previous:0, delta_pct:null}, month: {current:0, previous:0, delta_pct:null}};
+document.getElementById('pmToday').textContent = pm.today;
+document.getElementById('pmWeek').textContent  = pm.week.current;
+document.getElementById('pmMonth').textContent = pm.month.current;
+document.getElementById('pmWeekSub').textContent  = `vs ${pm.week.previous} prev 7 days`;
+document.getElementById('pmMonthSub').textContent = `vs ${pm.month.previous} prev 30 days`;
+
+function setDelta(el, pct) {
+  if (pct === null || pct === undefined) {
+    el.textContent = '—';
+    el.className = 'pm-delta flat';
+    return;
+  }
+  const sign = pct > 0 ? '↑' : (pct < 0 ? '↓' : '→');
+  el.textContent = `${sign} ${pct > 0 ? '+' : ''}${pct}%`;
+  el.className = 'pm-delta ' + (pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat'));
+}
+setDelta(document.getElementById('pmWeekDelta'),  pm.week.delta_pct);
+setDelta(document.getElementById('pmMonthDelta'), pm.month.delta_pct);
 
 // Clock + last refresh
 function updateNow() {
