@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Hiring System — Alva Labs</title>
+<title>Dashboard</title>
 <meta http-equiv="refresh" content="600">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -210,9 +210,9 @@
     background: var(--surface);
     backdrop-filter: blur(40px) saturate(160%);
     -webkit-backdrop-filter: blur(40px) saturate(160%);
-    border-radius: 24px;
-    padding: 48px 56px;
-    max-width: 440px;
+    border-radius: 20px;
+    padding: 36px 40px;
+    max-width: 380px;
     width: 100%;
     text-align: center;
     position: relative;
@@ -222,6 +222,7 @@
       0 24px 48px -16px rgba(54, 50, 47, 0.18),
       0 8px 20px -8px rgba(54, 50, 47, 0.1);
   }
+  .gate-form { display: flex; flex-direction: column; gap: 8px; }
   .gate-card::before {
     content: '';
     position: absolute;
@@ -300,14 +301,12 @@
 <!-- ============ AUTH GATE ============ -->
 <div id="authGate">
   <div class="gate-card">
-    <div class="gate-title">Hiring System <span class="sep">·</span> Alva Labs</div>
-    <div class="gate-sub">Enter access code to continue</div>
     <form class="gate-form" id="gateForm" autocomplete="off">
-      <label class="gate-label" for="gateInput">Access code</label>
       <input
         id="gateInput"
         class="gate-input"
         type="password"
+        placeholder="Access code"
         autocomplete="off"
         autocapitalize="none"
         spellcheck="false"
@@ -315,7 +314,6 @@
       />
       <div class="gate-error" id="gateError">&nbsp;</div>
     </form>
-    <div class="gate-hint">Code is remembered on this device.</div>
   </div>
 </div>
 
@@ -454,7 +452,7 @@ if (localStorage.getItem(STORAGE_KEY) === AUTH_HASH) {
 
 // =========== INJECTED DATA ===========
 const DATA = {
-  "generated_at": "2026-05-18T20:12:16.497723+00:00",
+  "generated_at": "2026-05-18T20:15:13.388774+00:00",
   "q2_target": 15,
   "q2_won": 0,
   "q2_lost": 10,
