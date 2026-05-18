@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hiring System — Alva Labs</title>
+<meta http-equiv="refresh" content="600">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --grey-50: #FBFBF9;
+    --grey-100: #F7F6F2;
+    --grey-200: #F3F2EB;
+    --grey-300: #E8E6DC;
+    --grey-400: #D9D4C8;
+    --grey-500: #BBB6AA;
+    --grey-600: #928E85;
+    --grey-700: #6A6862;
+    --grey-800: #43413F;
+    --grey-900: #1A1A1A;
+    --soft-black: #36322F;
+    --coral-100: #FFE2B5;
+    --coral-500: #FFA503;
+    --coral-700: #FF8A69;
+    --coral-800: #FF7988;
+    --coral-900: #FF6C9F;
+    --yellow-300: #FEEA98;
+    --yellow-700: #FFD122;
+    --yellow-800: #FFC600;
+    --bg-100: #CFE5EB;
+    --bg-500: #92C6D5;
+    --bg-900: #89C8D7;
+    --bg: var(--grey-200);
+    --surface: rgba(255, 255, 255, 0.62);
+    --surface-strong: rgba(255, 255, 255, 0.78);
+    --border: rgba(26, 26, 26, 0.06);
+    --border-strong: rgba(26, 26, 26, 0.1);
+    --text: var(--grey-900);
+    --text-soft: var(--grey-700);
+    --text-muted: var(--grey-600);
+    --serif: 'STIX Two Text', Georgia, serif;
+    --sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 60% at 12% 18%, rgba(255, 108, 159, 0.18), transparent 65%),
+      radial-gradient(ellipse 55% 55% at 88% 28%, rgba(255, 209, 34, 0.16), transparent 65%),
+      radial-gradient(ellipse 60% 50% at 75% 85%, rgba(137, 200, 215, 0.16), transparent 65%),
+      radial-gradient(ellipse 50% 40% at 25% 92%, rgba(255, 121, 136, 0.14), transparent 65%),
+      linear-gradient(180deg, var(--grey-100) 0%, var(--grey-200) 100%);
+    z-index: -2;
+    animation: drift 36s ease-in-out infinite;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='3' seed='9'/><feColorMatrix values='0 0 0 0 0   0 0 0 0 0   0 0 0 0 0   0 0 0 0.025 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>");
+    z-index: -1;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+    opacity: 0.6;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(2%, -1.5%) scale(1.04); }
+    66%      { transform: translate(-1.5%, 2%) scale(0.97); }
+  }
+  .dash {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 36px 44px 28px;
+    gap: 24px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 4px 4px;
+  }
+  .brand-title { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .brand-title h1 { font-family: var(--serif); font-size: 42px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+  .brand-title .sep { color: var(--coral-900); font-size: 36px; font-weight: 300; line-height: 1; }
+  .brand-title .q { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 32px; color: var(--text-soft); letter-spacing: -0.01em; }
+  .brand-sub { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.22em; margin-top: 8px; font-weight: 500; }
+  .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .clock { font-family: var(--sans); font-size: 16px; font-weight: 500; color: var(--text); letter-spacing: -0.005em; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; color: var(--grey-800); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 600; padding: 5px 12px; background: var(--surface-strong); border: 1px solid var(--border); border-radius: 999px; backdrop-filter: blur(20px); }
+  .live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--coral-900); box-shadow: 0 0 8px var(--coral-900); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+  .main { display: grid; grid-template-columns: 1.35fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 22px; min-height: 0; }
+  .hero       { grid-column: 1; grid-row: 1; }
+  .next-close { grid-column: 1; grid-row: 2; }
+  .logos      { grid-column: 2; grid-row: 1 / span 2; }
+  .pipeline   { grid-column: 3; grid-row: 1; }
+  .insights   { grid-column: 3; grid-row: 2; }
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border-radius: 24px;
+    padding: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px var(--border) inset,
+      0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+      0 24px 48px -16px rgba(54, 50, 47, 0.12),
+      0 8px 20px -8px rgba(54, 50, 47, 0.08);
+  }
+  .glass::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%);
+  }
+  .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .card-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-muted); font-weight: 600; }
+  .pill { font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--coral-900); background: rgba(255, 108, 159, 0.1); border: 1px solid rgba(255, 108, 159, 0.22); padding: 4px 12px; border-radius: 999px; letter-spacing: 0.02em; }
+  .hero-body { display: flex; flex-direction: column; justify-content: center; gap: 18px; flex: 1; min-height: 0; }
+  .hero-label { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--text-soft); font-weight: 400; letter-spacing: -0.005em; }
+  .hero-number { display: flex; align-items: baseline; gap: 12px; }
+  .hero-number .big { font-family: var(--serif); font-size: 168px; font-weight: 500; line-height: 0.9; letter-spacing: -0.045em; color: var(--text); }
+  .hero-number .target { font-family: var(--serif); font-style: italic; font-size: 56px; font-weight: 400; color: var(--text-muted); letter-spacing: -0.02em; }
+  .hero-number .accent { color: var(--coral-900); font-style: normal; }
+  .progress { position: relative; height: 10px; background: rgba(26, 26, 26, 0.06); border-radius: 999px; overflow: hidden; box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04) inset; margin-top: 8px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--coral-900) 0%, var(--coral-800) 100%); border-radius: 999px; box-shadow: 0 0 14px rgba(255, 108, 159, 0.4); transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .insights-chart { flex: 1; position: relative; min-height: 0; }
+  .insights-legend { display: flex; gap: 16px; margin-bottom: 8px; padding: 0 4px; }
+  .legend-item { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-soft); font-weight: 500; letter-spacing: 0.02em; }
+  .legend-item .swatch { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-item.jobs .swatch  { background: var(--coral-900); }
+  .legend-item.hires .swatch { background: var(--grey-800); }
+  .legend-item strong { font-family: var(--serif); font-size: 15px; font-weight: 500; color: var(--text); margin-left: 4px; letter-spacing: -0.02em; }
+  .deal-list { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .deal-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 14px; padding: 10px 14px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 12px; }
+  .deal-row .deal-main { min-width: 0; }
+  .deal-row .deal-name { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deal-row .deal-date { font-size: 10px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.02em; font-weight: 500; }
+  .stage-chip { font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+  .stage-chip.meeting   { color: var(--grey-700); background: rgba(106, 104, 98, 0.1); }
+  .stage-chip.discovery { color: #2a7a8a;          background: rgba(137, 200, 215, 0.18); }
+  .stage-chip.solution  { color: #b8860b;          background: rgba(255, 209, 34, 0.18); }
+  .stage-chip.proposal  { color: var(--coral-900); background: rgba(255, 108, 159, 0.14); }
+  .deal-row .deal-arr { font-family: var(--serif); font-size: 15px; font-weight: 500; color: var(--text); text-align: right; letter-spacing: -0.02em; white-space: nowrap; }
+  .deal-total { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-strong); display: flex; justify-content: space-between; align-items: flex-end; }
+  .deal-total .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-muted); font-weight: 600; }
+  .deal-total .v { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .deal-total #dealTotal { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--coral-900); line-height: 1; }
+  .deal-total .deal-total-sub { font-family: var(--sans); font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
+  .logo-list { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow: hidden; }
+  .logo-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 14px; transition: all 0.3s ease; }
+  .logo-row:hover { background: rgba(255, 255, 255, 0.75); transform: translateX(2px); }
+  .logo-row .rank { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--coral-900); font-weight: 500; text-align: center; line-height: 1; }
+  .logo-row .name { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .logo-row .meta-sm { font-size: 11px; color: var(--text-muted); margin-top: 3px; letter-spacing: 0.02em; font-weight: 500; }
+  .logo-row .arr { font-family: var(--serif); font-size: 19px; font-weight: 500; color: var(--text); text-align: right; letter-spacing: -0.02em; line-height: 1; }
+  .logo-row .arr small { font-family: var(--sans); font-size: 10px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; display: block; margin-top: 4px; }
+  .logo-total, .pipe-total { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-strong); display: flex; justify-content: space-between; align-items: baseline; }
+  .logo-total .l, .pipe-total .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-muted); font-weight: 600; }
+  .logo-total .v { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+  .pipe-total .v { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--coral-900); }
+  .stage-list { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+  .stage-row { display: flex; flex-direction: column; gap: 8px; }
+  .stage-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .stage-name { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .stage-deals { color: var(--text-muted); font-size: 12px; font-weight: 500; margin-left: 8px; }
+  .stage-arr { font-family: var(--serif); font-size: 17px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
+  .stage-bar { height: 6px; background: rgba(26, 26, 26, 0.05); border-radius: 999px; overflow: hidden; }
+  .stage-bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--coral-900) 0%, var(--coral-800) 100%); border-radius: 999px; box-shadow: 0 0 10px rgba(255, 108, 159, 0.3); transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  footer { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 11px; letter-spacing: 0.02em; padding: 0 8px; font-weight: 500; }
+  footer code { color: var(--grey-800); background: rgba(255, 255, 255, 0.5); padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: 'SF Mono', ui-monospace, monospace; border: 1px solid var(--border); }
+  footer strong { color: var(--text); font-weight: 600; }
+
+  /* ============ AUTH GATE ============ */
+  #authGate {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 24px;
+  }
+  #authGate.hidden { display: none; }
+  .gate-card {
+    background: var(--surface);
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border-radius: 24px;
+    padding: 48px 56px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    box-shadow:
+      0 0 0 1px var(--border) inset,
+      0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+      0 24px 48px -16px rgba(54, 50, 47, 0.18),
+      0 8px 20px -8px rgba(54, 50, 47, 0.1);
+  }
+  .gate-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%);
+  }
+  .gate-title {
+    font-family: var(--serif);
+    font-size: 34px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    color: var(--text);
+    line-height: 1.05;
+  }
+  .gate-title .sep { color: var(--coral-900); font-weight: 300; margin: 0 4px; }
+  .gate-sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--text-soft);
+    margin-top: 6px;
+  }
+  .gate-form { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; }
+  .gate-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: left;
+  }
+  .gate-input {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 500;
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong);
+    background: rgba(255, 255, 255, 0.65);
+    color: var(--text);
+    width: 100%;
+    text-align: center;
+    letter-spacing: 0.04em;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .gate-input:focus {
+    border-color: var(--coral-900);
+    box-shadow: 0 0 0 4px rgba(255, 108, 159, 0.14);
+  }
+  .gate-input.error { border-color: var(--coral-700); animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .gate-error {
+    font-size: 12px;
+    color: var(--coral-700);
+    font-weight: 500;
+    min-height: 18px;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .gate-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH GATE ============ -->
+<div id="authGate">
+  <div class="gate-card">
+    <div class="gate-title">Hiring System <span class="sep">·</span> Alva Labs</div>
+    <div class="gate-sub">Enter access code to continue</div>
+    <form class="gate-form" id="gateForm" autocomplete="off">
+      <label class="gate-label" for="gateInput">Access code</label>
+      <input
+        id="gateInput"
+        class="gate-input"
+        type="password"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        autofocus
+      />
+      <div class="gate-error" id="gateError">&nbsp;</div>
+    </form>
+    <div class="gate-hint">Code is remembered on this device.</div>
+  </div>
+</div>
+
+<div class="dash" style="display: none;" id="dashRoot">
+  <header>
+    <div>
+      <div class="brand-title">
+        <h1>Hiring System</h1>
+        <span class="sep">·</span>
+        <span class="q">Q2 twenty-twenty-six</span>
+      </div>
+      <div class="brand-sub">Alva Labs</div>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="now">—</div>
+      <div class="live">Live data</div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="glass hero">
+      <div class="card-head">
+        <div class="card-title">Quarterly Logo Target</div>
+        <div class="pill">Apr – Jun 2026</div>
+      </div>
+      <div class="hero-body">
+        <div class="hero-label">Logos won this quarter</div>
+        <div class="hero-number">
+          <span class="big" id="hWon">0</span>
+          <span class="target">/ <span class="accent">15</span></span>
+        </div>
+        <div class="progress">
+          <div class="progress-fill" id="hBar" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass next-close">
+      <div class="card-head">
+        <div class="card-title">Open Deals with Close Date in Q2</div>
+        <div class="pill" id="q2DealsPill">0 deals</div>
+      </div>
+      <div class="deal-list" id="dealList"></div>
+      <div class="deal-total">
+        <div class="l">Total Potential ARR</div>
+        <div class="v">
+          <span id="dealTotal">—</span>
+          <span class="deal-total-sub" id="dealAvg">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass logos">
+      <div class="card-head">
+        <div class="card-title">Existing Hiring System Logos</div>
+        <div class="pill" id="logoCount">0 customers</div>
+      </div>
+      <div class="logo-list" id="logoList"></div>
+      <div class="logo-total">
+        <div class="l">Total ARR</div>
+        <div class="v" id="logoTotal">—</div>
+      </div>
+    </div>
+
+    <div class="glass pipeline">
+      <div class="card-head">
+        <div class="card-title">Open Pipeline · Hiring System</div>
+        <div class="pill" id="pipeCount">0 open deals</div>
+      </div>
+      <div class="stage-list" id="stageList"></div>
+      <div class="pipe-total">
+        <div class="l">Potential ARR</div>
+        <div class="v" id="pipeTotal">—</div>
+      </div>
+    </div>
+
+    <div class="glass insights">
+      <div class="card-head">
+        <div class="card-title">Product Insights · MoM</div>
+        <div class="pill">Active subscriptions</div>
+      </div>
+      <div class="insights-legend">
+        <span class="legend-item jobs"><span class="swatch"></span>HS Jobs <strong id="totJobs">—</strong></span>
+        <span class="legend-item hires"><span class="swatch"></span>HS Hires <strong id="totHires">—</strong></span>
+      </div>
+      <div class="insights-chart">
+        <canvas id="insightsCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div>Source: HubSpot · <code>dealtype = "New business (hiring system)"</code></div>
+    <div>Last refresh <strong id="lastRefresh">—</strong> · Auto-refresh every 10 min</div>
+  </footer>
+</div>
+
+<script>
+// =========== AUTH GATE ===========
+const AUTH_HASH = '4d98d2b78d87b7b466f94eb66b1f810c276498061c0f1f02a8c6a414d8b200b9';
+const STORAGE_KEY = 'hs-dashboard-auth';
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function unlockDashboard() {
+  document.getElementById('authGate').classList.add('hidden');
+  document.getElementById('dashRoot').style.display = '';
+}
+
+// Skip gate if already authed on this device
+if (localStorage.getItem(STORAGE_KEY) === AUTH_HASH) {
+  unlockDashboard();
+} else {
+  const form = document.getElementById('gateForm');
+  const input = document.getElementById('gateInput');
+  const errEl = document.getElementById('gateError');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const h = await sha256(input.value);
+    if (h === AUTH_HASH) {
+      localStorage.setItem(STORAGE_KEY, AUTH_HASH);
+      errEl.textContent = ' ';
+      input.classList.remove('error');
+      unlockDashboard();
+    } else {
+      errEl.textContent = 'Incorrect code';
+      input.classList.add('error');
+      setTimeout(() => input.classList.remove('error'), 600);
+      input.select();
+    }
+  });
+}
+
+// =========== INJECTED DATA ===========
+const DATA = /*__DATA__*/{};
+// =====================================
+
+const Q2_TARGET = DATA.q2_target;
+const q2Won = DATA.q2_won;
+const q2Lost = DATA.q2_lost;
+const logos = DATA.logos;
+const stages = DATA.stages;
+const upcomingDeals = DATA.q2_open_deals;
+const insightsData = DATA.insights;
+const lastRefreshIso = DATA.generated_at;
+
+const fmt = v => {
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+  if (Math.abs(v) >= 1e3) return Math.round(v / 1e3) + 'k';
+  return v.toString();
+};
+const fmtFull = v => Math.round(v).toLocaleString('en-US');
+
+// Hero
+document.getElementById('hWon').textContent = q2Won;
+setTimeout(() => {
+  document.getElementById('hBar').style.width = ((q2Won / Q2_TARGET) * 100).toFixed(1) + '%';
+}, 120);
+
+// Logos
+const logoList = document.getElementById('logoList');
+const romans = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+logos.forEach((l, i) => {
+  const div = document.createElement('div');
+  div.className = 'logo-row';
+  div.innerHTML = `
+    <div class="rank">${romans[i] || (i+1)}</div>
+    <div>
+      <div class="name">${l.company}</div>
+      <div class="meta-sm">Closed ${l.close}</div>
+    </div>
+    <div class="arr">
+      ${fmtFull(l.arr)}
+      <small>SEK</small>
+    </div>`;
+  logoList.appendChild(div);
+});
+document.getElementById('logoCount').textContent = logos.length + ' customers';
+document.getElementById('logoTotal').textContent = fmtFull(logos.reduce((s,l)=>s+l.arr, 0)) + ' SEK';
+
+// Pipeline
+const stageList = document.getElementById('stageList');
+const stageMax = Math.max(1, ...stages.map(s => s.arr));
+const totalPipeCount = stages.reduce((s,x)=>s+x.count, 0);
+stages.forEach(s => {
+  const div = document.createElement('div');
+  div.className = 'stage-row';
+  div.innerHTML = `
+    <div class="stage-head">
+      <div>
+        <span class="stage-name">${s.stage}</span>
+        <span class="stage-deals">${s.count} deals</span>
+      </div>
+      <span class="stage-arr">${fmt(s.arr)} SEK</span>
+    </div>
+    <div class="stage-bar"><span style="width: 0%" data-w="${(s.arr / stageMax * 100).toFixed(1)}%"></span></div>`;
+  stageList.appendChild(div);
+});
+setTimeout(() => {
+  document.querySelectorAll('.stage-bar > span').forEach(el => { el.style.width = el.dataset.w; });
+}, 240);
+document.getElementById('pipeCount').textContent = totalPipeCount + ' open deals';
+document.getElementById('pipeTotal').textContent = fmt(stages.reduce((s,x)=>s+x.arr, 0)) + ' SEK';
+
+// Q2 open deals
+const stageToClass = {
+  'Meeting Booked':      'meeting',
+  'Discovery Completed': 'discovery',
+  'Solution Presented':  'solution',
+  'Proposal Sent':       'proposal',
+};
+const stageShort = {
+  'Meeting Booked':      'Meeting Booked',
+  'Discovery Completed': 'Discovery ✓',
+  'Solution Presented':  'Solution Presented',
+  'Proposal Sent':       'Proposal Sent',
+};
+const dealList = document.getElementById('dealList');
+upcomingDeals.forEach(d => {
+  const div = document.createElement('div');
+  div.className = 'deal-row';
+  div.innerHTML = `
+    <div class="deal-main">
+      <div class="deal-name">${d.company}</div>
+      <div class="deal-date">Expected ${d.close}</div>
+    </div>
+    <span class="stage-chip ${stageToClass[d.stage] || 'meeting'}">${stageShort[d.stage] || d.stage}</span>
+    <div class="deal-arr">${fmt(d.arr)} SEK</div>`;
+  dealList.appendChild(div);
+});
+const dealTotalArr = upcomingDeals.reduce((s, d) => s + d.arr, 0);
+const dealAvgArr  = dealTotalArr / Math.max(upcomingDeals.length, 1);
+document.getElementById('q2DealsPill').textContent = upcomingDeals.length + ' deals';
+document.getElementById('dealTotal').textContent = fmtFull(dealTotalArr) + ' SEK';
+document.getElementById('dealAvg').textContent = 'avg ' + fmt(dealAvgArr) + ' SEK per deal';
+
+// Product Insights chart
+document.getElementById('totJobs').textContent = insightsData.jobs.reduce((s,v)=>s+v, 0);
+document.getElementById('totHires').textContent = insightsData.hires.reduce((s,v)=>s+v, 0);
+const insightsCtx = document.getElementById('insightsCanvas').getContext('2d');
+new Chart(insightsCtx, {
+  type: 'bar',
+  data: {
+    labels: insightsData.labels,
+    datasets: [
+      { label: 'HS Jobs',  data: insightsData.jobs,  backgroundColor: '#FF6C9F', borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.65 },
+      { label: 'HS Hires', data: insightsData.hires, backgroundColor: '#43413F', borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.65 },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 16, right: 4, bottom: 4, left: 4 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(26, 26, 26, 0.92)',
+        titleFont: { family: "'Inter', sans-serif", size: 12, weight: '600' },
+        bodyFont:  { family: "'Inter', sans-serif", size: 12 },
+        padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4,
+      },
+    },
+    scales: {
+      x: { grid: { display: false, drawBorder: false }, ticks: { color: '#6A6862', font: { family: "'Inter', sans-serif", size: 12, weight: '500' } } },
+      y: { grid: { color: 'rgba(26, 26, 26, 0.06)', drawBorder: false }, ticks: { color: '#928E85', font: { family: "'Inter', sans-serif", size: 11 }, stepSize: 25 }, beginAtZero: true },
+    },
+  },
+});
+
+// Clock + last refresh
+function updateNow() {
+  const d = new Date();
+  document.getElementById('now').textContent = d.toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+updateNow();
+setInterval(updateNow, 30000);
+
+if (lastRefreshIso) {
+  const d = new Date(lastRefreshIso);
+  document.getElementById('lastRefresh').textContent = d.toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm'
+  });
+}
+</script>
+</body>
+</html>

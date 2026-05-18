@@ -1,0 +1,280 @@
+"""
+Hiring System Dashboard Generator
+Fetches HubSpot deals data and writes docs/index.html for GitHub Pages.
+
+Environment variables required:
+- HUBSPOT_TOKEN: HubSpot API token (private app access token)
+
+Lightdash data (HS jobs/hires MoM, existing logos) is kept as a static
+snapshot in this script - update manually when needed.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import requests
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "").strip()
+HUBSPOT_BASE = "https://api.hubapi.com"
+HS_DEALTYPE = "New business (hiring system)"
+SALES_PIPELINE = "default"
+STAGE_WON  = "931715"
+STAGE_LOST = "931716"
+
+# HubSpot Sales Pipeline stage IDs → human-readable labels
+STAGE_LABELS = {
+    "1331053572":             "Meeting Booked",
+    "presentationscheduled":  "Discovery Completed",
+    "contractsent":           "Solution Presented",
+    "6131468":                "Proposal Sent",
+    "996022":                 "Contract Sent",
+    STAGE_WON:                "Closed Won",
+    STAGE_LOST:               "Closed Lost",
+}
+# Order matters for stage list rendering (early → late)
+OPEN_STAGE_ORDER = [
+    "Meeting Booked",
+    "Discovery Completed",
+    "Solution Presented",
+    "Proposal Sent",
+    "Contract Sent",
+]
+
+Q2_START = "2026-04-01"
+Q2_END   = "2026-06-30"
+Q2_TARGET = 15
+
+# ============================================================
+# STATIC LIGHTDASH SNAPSHOT
+# Update these manually when needed (changes daily, not time-critical).
+# ============================================================
+
+INSIGHTS_SNAPSHOT = {
+    "labels": ["Jan", "Feb", "Mar", "Apr", "May"],
+    "jobs":   [63, 40, 81, 28, 6],   # HS jobs created per month, active subscriptions only
+    "hires":  [13,  9, 14, 10, 4],   # HS positions filled per month (proxy for hires)
+}
+
+# ============================================================
+# HUBSPOT API HELPERS
+# ============================================================
+
+def hs_search(filter_groups: list, properties: list) -> list[dict]:
+    """Paginate through HubSpot deal search results."""
+    headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}"}
+    out: list[dict] = []
+    body = {"filterGroups": filter_groups, "properties": properties, "limit": 100}
+    while True:
+        r = requests.post(
+            f"{HUBSPOT_BASE}/crm/v3/objects/deals/search",
+            headers=headers, json=body, timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        out.extend(data.get("results", []))
+        after = data.get("paging", {}).get("next", {}).get("after")
+        if not after:
+            return out
+        body["after"] = after
+
+
+def hs_deal_to_company_map(deal_ids: list[str]) -> dict[str, int]:
+    """Batch-fetch deal → company associations."""
+    headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}"}
+    mapping: dict[str, int] = {}
+    for i in range(0, len(deal_ids), 100):
+        chunk = deal_ids[i : i + 100]
+        body = {"inputs": [{"id": did} for did in chunk]}
+        r = requests.post(
+            f"{HUBSPOT_BASE}/crm/v4/associations/deals/companies/batch/read",
+            headers=headers, json=body, timeout=30,
+        )
+        r.raise_for_status()
+        for result in r.json().get("results", []):
+            if result.get("to"):
+                mapping[result["from"]["id"]] = result["to"][0]["toObjectId"]
+    return mapping
+
+
+def hs_companies(company_ids: list[int]) -> dict[int, str]:
+    """Batch-fetch company names."""
+    headers = {"Authorization": f"Bearer {HUBSPOT_TOKEN}"}
+    names: dict[int, str] = {}
+    ids = list({int(c) for c in company_ids})
+    for i in range(0, len(ids), 100):
+        chunk = ids[i : i + 100]
+        body = {"inputs": [{"id": c} for c in chunk], "properties": ["name"]}
+        r = requests.post(
+            f"{HUBSPOT_BASE}/crm/v3/objects/companies/batch/read",
+            headers=headers, json=body, timeout=30,
+        )
+        r.raise_for_status()
+        for c in r.json().get("results", []):
+            names[int(c["id"])] = c.get("properties", {}).get("name") or "Unknown"
+    return names
+
+
+# ============================================================
+# FETCH + TRANSFORM
+# ============================================================
+
+def fetch_hs_deals() -> list[dict]:
+    """All HS new business deals across all stages, enriched with company."""
+    props = [
+        "dealname", "amount", "closedate", "createdate",
+        "dealstage", "pipeline", "dealtype", "contract_start_date",
+    ]
+    deals = hs_search(
+        [{"filters": [{"propertyName": "dealtype", "operator": "EQ", "value": HS_DEALTYPE}]}],
+        props,
+    )
+    # Enrich with company name
+    deal_ids = [d["id"] for d in deals]
+    deal_to_co = hs_deal_to_company_map(deal_ids) if deal_ids else {}
+    co_names = hs_companies(list(deal_to_co.values())) if deal_to_co else {}
+    for d in deals:
+        p = d.get("properties", {})
+        co_id = deal_to_co.get(d["id"])
+        p["_company_id"]   = co_id
+        p["_company_name"] = co_names.get(co_id, "Unknown") if co_id else "Unknown"
+        # Fallback: use part before " - " in dealname if company is Unknown
+        if p["_company_name"] in ("Unknown", "") and " - " in (p.get("dealname") or ""):
+            p["_company_name"] = p["dealname"].split(" - ")[0]
+        elif p["_company_name"] in ("Unknown", "") and " – " in (p.get("dealname") or ""):
+            p["_company_name"] = p["dealname"].split(" – ")[0]
+        p["_amount"] = float(p.get("amount") or 0)
+    return deals
+
+
+def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
+    """Aggregate HubSpot data for dashboard rendering."""
+    won = [d for d in deals if d["properties"].get("dealstage") == STAGE_WON]
+    lost = [d for d in deals if d["properties"].get("dealstage") == STAGE_LOST]
+    open_deals = [
+        d for d in deals
+        if d["properties"].get("dealstage") not in (STAGE_WON, STAGE_LOST)
+    ]
+
+    # ---- Existing logos (all Closed Won HS deals, newest first) ----
+    won_sorted = sorted(
+        won,
+        key=lambda d: d["properties"].get("closedate") or "",
+        reverse=True,
+    )
+    logos = [
+        {
+            "company": d["properties"]["_company_name"],
+            "arr": d["properties"]["_amount"],
+            "close": (d["properties"].get("closedate") or "")[:10],
+        }
+        for d in won_sorted
+    ]
+
+    # ---- Q2 won count (close date in Q2 2026) ----
+    q2_won = sum(
+        1 for d in won
+        if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
+    )
+    q2_lost = sum(
+        1 for d in lost
+        if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
+    )
+
+    # ---- Open pipeline by stage ----
+    stage_agg: dict[str, dict] = {}
+    for d in open_deals:
+        stage_id = d["properties"].get("dealstage")
+        label = STAGE_LABELS.get(stage_id, stage_id)
+        if label not in stage_agg:
+            stage_agg[label] = {"stage": label, "count": 0, "arr": 0.0}
+        stage_agg[label]["count"] += 1
+        stage_agg[label]["arr"]   += d["properties"]["_amount"]
+    # Order stages by progression, drop empty
+    stages = [
+        {"stage": s, "count": stage_agg[s]["count"], "arr": stage_agg[s]["arr"]}
+        for s in OPEN_STAGE_ORDER
+        if s in stage_agg and stage_agg[s]["count"] > 0
+    ]
+
+    # ---- Open deals with close date in Q2 ----
+    q2_open = [
+        {
+            "company": d["properties"]["_company_name"],
+            "stage": STAGE_LABELS.get(d["properties"].get("dealstage"), "Meeting Booked"),
+            "close": (d["properties"].get("closedate") or "")[:10],
+            "arr": d["properties"]["_amount"],
+        }
+        for d in open_deals
+        if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
+    ]
+    q2_open.sort(key=lambda x: x["close"])
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "q2_target": Q2_TARGET,
+        "q2_won": q2_won,
+        "q2_lost": q2_lost,
+        "logos": logos,
+        "stages": stages,
+        "q2_open_deals": q2_open,
+        "insights": INSIGHTS_SNAPSHOT,
+    }
+
+
+# ============================================================
+# RENDER
+# ============================================================
+
+def render(data: dict[str, Any], template_path: Path, output_path: Path) -> None:
+    template = template_path.read_text(encoding="utf-8")
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    # Inject between the /*__DATA__*/ markers
+    rendered = template.replace("/*__DATA__*/{}", payload)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(rendered, encoding="utf-8")
+    size_kb = output_path.stat().st_size / 1024
+    print(f"✓ Wrote {output_path} ({size_kb:.1f} KB)")
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+def main() -> int:
+    if not HUBSPOT_TOKEN:
+        print("ERROR: HUBSPOT_TOKEN env var is missing", file=sys.stderr)
+        return 1
+
+    root = Path(__file__).resolve().parent.parent
+    template_path = root / "template.html"
+    output_path   = root / "docs" / "index.html"
+
+    print(f"Fetching HubSpot HS deals (dealtype='{HS_DEALTYPE}')…")
+    t0 = time.time()
+    deals = fetch_hs_deals()
+    print(f"  → {len(deals)} deals in {time.time()-t0:.1f}s")
+
+    data = build_dashboard_data(deals)
+    print(
+        f"  Q2 won: {data['q2_won']}/{data['q2_target']} · "
+        f"Logos all-time: {len(data['logos'])} · "
+        f"Open pipeline: {sum(s['count'] for s in data['stages'])} deals · "
+        f"Q2 open deals: {len(data['q2_open_deals'])}"
+    )
+
+    render(data, template_path, output_path)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
