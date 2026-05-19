@@ -41,9 +41,9 @@ STAGE_LABELS = {
     STAGE_WON:                "Closed Won",
     STAGE_LOST:               "Closed Lost",
 }
-# Order matters for stage list rendering (early → late)
+# Stages counted as "pipeline" (Meeting Booked deliberately excluded —
+# a deal only counts as pipeline once it reaches Discovery Completed).
 OPEN_STAGE_ORDER = [
-    "Meeting Booked",
     "Discovery Completed",
     "Solution Presented",
     "Proposal Sent",
@@ -206,7 +206,7 @@ def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
         if s in stage_agg and stage_agg[s]["count"] > 0
     ]
 
-    # ---- Open deals with close date in Q2 ----
+    # ---- Open deals with close date in Q2 (Meeting Booked excluded — not pipeline) ----
     q2_open = [
         {
             "company": d["properties"]["_company_name"],
@@ -216,6 +216,7 @@ def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
         }
         for d in open_deals
         if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
+        and STAGE_LABELS.get(d["properties"].get("dealstage")) in OPEN_STAGE_ORDER
     ]
     q2_open.sort(key=lambda x: x["close"])
 
