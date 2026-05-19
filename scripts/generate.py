@@ -26,20 +26,35 @@ import requests
 
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "").strip()
 HUBSPOT_BASE = "https://api.hubapi.com"
-HS_DEALTYPE = "New business (hiring system)"
-SALES_PIPELINE = "default"
-STAGE_WON  = "931715"
-STAGE_LOST = "931716"
 
-# HubSpot Sales Pipeline stage IDs → human-readable labels
+# Source of truth for "is this a Hiring System deal" — set by RevOps on every deal
+# in both Sales and Customer pipelines.
+PRODUCT_TYPE_HS = "Hiring System"
+
+SALES_PIPELINE    = "default"
+CUSTOMER_PIPELINE = "816314391"
+
+# Won/Lost stage IDs across both pipelines
+WON_STAGES  = {"931715", "1205100833"}   # Sales:Won, Customer:Won
+LOST_STAGES = {"931716", "1205100834"}   # Sales:Lost, Customer:Lost
+
+# Sales pipeline stage IDs → human-readable labels
 STAGE_LABELS = {
     "1331053572":             "Meeting Booked",
     "presentationscheduled":  "Discovery Completed",
     "contractsent":           "Solution Presented",
     "6131468":                "Proposal Sent",
     "996022":                 "Contract Sent",
-    STAGE_WON:                "Closed Won",
-    STAGE_LOST:               "Closed Lost",
+    "931715":                 "Closed Won",
+    "931716":                 "Closed Lost",
+    # Customer pipeline
+    "1205100828":             "Identified Opportunity",
+    "1205100829":             "Validating Benefits",
+    "1205100830":             "Confirmed Value",
+    "1205100831":             "Negotiating",
+    "1205100832":             "Verbal Agreement",
+    "1205100833":             "Closed Won",
+    "1205100834":             "Closed Lost",
 }
 # Stages counted as "pipeline" (Meeting Booked deliberately excluded —
 # a deal only counts as pipeline once it reaches Discovery Completed).
@@ -129,13 +144,13 @@ def hs_companies(company_ids: list[int]) -> dict[int, str]:
 # ============================================================
 
 def fetch_hs_deals() -> list[dict]:
-    """All HS new business deals across all stages, enriched with company."""
+    """All HS deals across both Sales and Customer pipelines, enriched with company."""
     props = [
         "dealname", "amount", "closedate", "createdate",
-        "dealstage", "pipeline", "dealtype", "contract_start_date",
+        "dealstage", "pipeline", "dealtype", "product_type", "contract_start_date",
     ]
     deals = hs_search(
-        [{"filters": [{"propertyName": "dealtype", "operator": "EQ", "value": HS_DEALTYPE}]}],
+        [{"filters": [{"propertyName": "product_type", "operator": "EQ", "value": PRODUCT_TYPE_HS}]}],
         props,
     )
     # Enrich with company name
@@ -158,33 +173,38 @@ def fetch_hs_deals() -> list[dict]:
 
 def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
     """Aggregate HubSpot data for dashboard rendering."""
-    won = [d for d in deals if d["properties"].get("dealstage") == STAGE_WON]
-    lost = [d for d in deals if d["properties"].get("dealstage") == STAGE_LOST]
+    won = [d for d in deals if d["properties"].get("dealstage") in WON_STAGES]
+    lost = [d for d in deals if d["properties"].get("dealstage") in LOST_STAGES]
     open_deals = [
         d for d in deals
-        if d["properties"].get("dealstage") not in (STAGE_WON, STAGE_LOST)
+        if d["properties"].get("dealstage") not in WON_STAGES | LOST_STAGES
     ]
 
-    # ---- Existing logos (all Closed Won HS deals, newest first) ----
-    won_sorted = sorted(
-        won,
-        key=lambda d: d["properties"].get("closedate") or "",
-        reverse=True,
-    )
-    logos = [
-        {
+    # ---- Existing HS Logos (unique companies with at least one Won HS deal) ----
+    # If a company has multiple Won deals (e.g., Sales New + Customer Renewal),
+    # pick the most recent one to represent the logo's current ARR.
+    won_by_company: dict[int, dict] = {}
+    for d in sorted(won, key=lambda x: x["properties"].get("closedate") or ""):
+        co_id = d["properties"].get("_company_id")
+        if not co_id:
+            co_id = f"_name:{d['properties'].get('_company_name', 'Unknown')}"
+        # later iteration overwrites — gives us most recent Won per company
+        won_by_company[co_id] = {
             "company": d["properties"]["_company_name"],
             "arr": d["properties"]["_amount"],
             "close": (d["properties"].get("closedate") or "")[:10],
         }
-        for d in won_sorted
-    ]
+    logos = sorted(won_by_company.values(), key=lambda x: x["close"], reverse=True)
 
-    # ---- Q2 won count (close date in Q2 2026) ----
-    q2_won = sum(
-        1 for d in won
-        if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
-    )
+    # ---- Q2 won = unique companies with any Won HS deal in Q2 (Sales OR Customer) ----
+    q2_won_companies: set = set()
+    for d in won:
+        close = (d["properties"].get("closedate") or "")[:10]
+        if Q2_START <= close <= Q2_END:
+            co_id = d["properties"].get("_company_id") or d["properties"].get("_company_name")
+            q2_won_companies.add(co_id)
+    q2_won = len(q2_won_companies)
+
     q2_lost = sum(
         1 for d in lost
         if Q2_START <= (d["properties"].get("closedate") or "")[:10] <= Q2_END
@@ -309,7 +329,7 @@ def main() -> int:
     template_path = root / "template.html"
     output_path   = root / "docs" / "index.html"
 
-    print(f"Fetching HubSpot HS deals (dealtype='{HS_DEALTYPE}')…")
+    print(f"Fetching HubSpot HS deals (product_type='{PRODUCT_TYPE_HS}')…")
     t0 = time.time()
     deals = fetch_hs_deals()
     print(f"  → {len(deals)} deals in {time.time()-t0:.1f}s")
