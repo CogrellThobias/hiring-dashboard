@@ -27,6 +27,22 @@ import requests
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "").strip()
 HUBSPOT_BASE = "https://api.hubapi.com"
 
+LIGHTDASH_TOKEN = os.environ.get("LIGHTDASH_TOKEN", "").strip()
+LIGHTDASH_BASE = "https://eu1.lightdash.cloud/api/v1"
+LIGHTDASH_PROJECT = "c18ef346-6a50-4786-849c-77495aaf3962"
+
+# Alva internal orgs (excluded from Product Insights)
+ALVA_INTERNAL_ORG_IDS = [
+    11,           # Alva Labs main
+    309392277,    # Alva Labs (duplicate)
+    750396559,    # Alva Job Marketplace Beta
+    671700569,    # alvalabs2
+    1987056611,   # Alva Labs 2
+    1858502011,   # test Alva
+    2014729123,   # Alva Labs Test Customer
+]
+INSIGHTS_START_MONTH = "2026-01-01"
+
 # Source of truth for "is this a Hiring System deal" — set by RevOps on every deal
 # in both Sales and Customer pipelines.
 PRODUCT_TYPE_HS = "Hiring System"
@@ -74,10 +90,10 @@ Q2_TARGET = 15
 # Update these manually when needed (changes daily, not time-critical).
 # ============================================================
 
-INSIGHTS_SNAPSHOT = {
+INSIGHTS_FALLBACK = {
     "labels": ["Jan", "Feb", "Mar", "Apr", "May"],
-    "jobs":   [63, 40, 81, 28, 6],   # HS jobs created per month, active subscriptions only
-    "hires":  [13,  9, 14, 10, 4],   # HS positions filled per month (proxy for hires)
+    "jobs":   [63, 40, 81, 28, 6],
+    "hires":  [13,  9, 14, 10, 4],
 }
 
 # ============================================================
@@ -140,6 +156,132 @@ def hs_companies(company_ids: list[int]) -> dict[int, str]:
 
 
 # ============================================================
+# LIGHTDASH API HELPERS
+# ============================================================
+
+def ld_run_query(explore: str, dimensions: list[str], metrics: list[str],
+                 filters: dict, sorts: list[dict] | None = None,
+                 limit: int = 100) -> list[dict]:
+    """Run a Lightdash metric query and return raw rows."""
+    body = {
+        "exploreName": explore,
+        "dimensions": dimensions,
+        "metrics": metrics,
+        "filters": filters,
+        "sorts": sorts or [],
+        "tableCalculations": [],
+        "limit": limit,
+    }
+    r = requests.post(
+        f"{LIGHTDASH_BASE}/projects/{LIGHTDASH_PROJECT}/explores/{explore}/runQuery",
+        headers={"Authorization": f"ApiKey {LIGHTDASH_TOKEN}", "Content-Type": "application/json"},
+        json=body, timeout=60,
+    )
+    r.raise_for_status()
+    data = r.json()
+    if data.get("status") != "ok":
+        raise RuntimeError(f"Lightdash error: {data}")
+    return data["results"]["rows"]
+
+
+def ld_row_value(row: dict, field: str):
+    """Extract raw value from a Lightdash row (nested under value.raw)."""
+    return row.get(field, {}).get("value", {}).get("raw")
+
+
+def fetch_active_contract_org_ids() -> list[int]:
+    """Get organization_integer_ids with at least one active contract."""
+    rows = ld_run_query(
+        explore="contract_details",
+        dimensions=["contract_details_organization_integer_id"],
+        metrics=[],
+        filters={"dimensions": {"id": "root", "and": [
+            {"id":"a","target":{"fieldId":"contract_details_is_active_contract"},
+             "operator":"equals","values":[True]},
+            {"id":"b","target":{"fieldId":"contract_details_organization_integer_id"},
+             "operator":"notEquals","values":ALVA_INTERNAL_ORG_IDS},
+        ]}},
+        limit=5000,
+    )
+    ids = []
+    for r in rows:
+        v = ld_row_value(r, "contract_details_organization_integer_id")
+        if v is not None:
+            ids.append(int(v))
+    return ids
+
+
+def fetch_insights_mom() -> dict:
+    """Fetch HS jobs/hires per month from 2026-01 onwards, active subscriptions only."""
+    active_ids = fetch_active_contract_org_ids()
+    print(f"  → {len(active_ids)} active contract orgs", file=sys.stderr)
+
+    common_filters = [
+        {"id":"a","target":{"fieldId":"job_position_details_hiring_success_enabled"},
+         "operator":"equals","values":[True]},
+        {"id":"c","target":{"fieldId":"job_position_details_organization_integer_id"},
+         "operator":"equals","values":active_ids},
+    ]
+
+    # HS jobs created per month
+    jobs_rows = ld_run_query(
+        explore="job_position_details",
+        dimensions=["job_position_details_created_timestamp_month"],
+        metrics=["job_position_details_count_job_positions"],
+        filters={"dimensions": {"id":"root","and":[
+            *common_filters,
+            {"id":"d","target":{"fieldId":"job_position_details_created_timestamp_month"},
+             "operator":"greaterThanOrEqual","values":[INSIGHTS_START_MONTH]},
+        ]}},
+        sorts=[{"fieldId":"job_position_details_created_timestamp_month","descending":False}],
+        limit=24,
+    )
+
+    # HS positions filled per month (first hired date)
+    hires_rows = ld_run_query(
+        explore="job_position_details",
+        dimensions=["job_position_details_first_hired_date_month"],
+        metrics=["job_position_details_count_job_positions"],
+        filters={"dimensions": {"id":"root","and":[
+            *common_filters,
+            {"id":"d","target":{"fieldId":"job_position_details_first_hired_date_month"},
+             "operator":"greaterThanOrEqual","values":[INSIGHTS_START_MONTH]},
+        ]}},
+        sorts=[{"fieldId":"job_position_details_first_hired_date_month","descending":False}],
+        limit=24,
+    )
+
+    # Merge into month-aligned arrays
+    MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    jobs_by_month  = {}
+    hires_by_month = {}
+    for r in jobs_rows:
+        m = ld_row_value(r, "job_position_details_created_timestamp_month")
+        v = ld_row_value(r, "job_position_details_count_job_positions")
+        if m: jobs_by_month[m[:7]] = int(v or 0)
+    for r in hires_rows:
+        m = ld_row_value(r, "job_position_details_first_hired_date_month")
+        v = ld_row_value(r, "job_position_details_count_job_positions")
+        if m: hires_by_month[m[:7]] = int(v or 0)
+
+    # Build aligned arrays through current month
+    now = datetime.now(timezone.utc)
+    months: list[str] = []
+    cur_year, cur_month = 2026, 1
+    while (cur_year, cur_month) <= (now.year, now.month):
+        months.append(f"{cur_year}-{cur_month:02d}")
+        cur_month += 1
+        if cur_month > 12:
+            cur_month = 1; cur_year += 1
+
+    return {
+        "labels": [MONTH_NAMES[int(m.split('-')[1])-1] for m in months],
+        "jobs":   [jobs_by_month.get(m, 0)  for m in months],
+        "hires":  [hires_by_month.get(m, 0) for m in months],
+    }
+
+
+# ============================================================
 # FETCH + TRANSFORM
 # ============================================================
 
@@ -171,7 +313,7 @@ def fetch_hs_deals() -> list[dict]:
     return deals
 
 
-def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
+def build_dashboard_data(deals: list[dict], _insights_data: dict) -> dict[str, Any]:
     """Aggregate HubSpot data for dashboard rendering."""
     won = [d for d in deals if d["properties"].get("dealstage") in WON_STAGES]
     lost = [d for d in deals if d["properties"].get("dealstage") in LOST_STAGES]
@@ -251,7 +393,7 @@ def build_dashboard_data(deals: list[dict]) -> dict[str, Any]:
         "logos": logos,
         "stages": stages,
         "q2_open_deals": q2_open,
-        "insights": INSIGHTS_SNAPSHOT,
+        "insights": _insights_data,
         "pipe_movement": pipe_movement,
     }
 
@@ -334,7 +476,21 @@ def main() -> int:
     deals = fetch_hs_deals()
     print(f"  → {len(deals)} deals in {time.time()-t0:.1f}s")
 
-    data = build_dashboard_data(deals)
+    # Fetch Lightdash Product Insights (with fallback if API fails)
+    if LIGHTDASH_TOKEN:
+        try:
+            print("Fetching Lightdash Product Insights…")
+            t0 = time.time()
+            insights = fetch_insights_mom()
+            print(f"  → {len(insights['labels'])} months in {time.time()-t0:.1f}s")
+        except Exception as e:
+            print(f"  ⚠ Lightdash fetch failed ({e}), using fallback snapshot", file=sys.stderr)
+            insights = INSIGHTS_FALLBACK
+    else:
+        print("  No LIGHTDASH_TOKEN — using fallback snapshot")
+        insights = INSIGHTS_FALLBACK
+
+    data = build_dashboard_data(deals, insights)
     print(
         f"  Q2 won: {data['q2_won']}/{data['q2_target']} · "
         f"Logos all-time: {len(data['logos'])} · "
