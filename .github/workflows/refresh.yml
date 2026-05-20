@@ -43,6 +43,7 @@ jobs:
       - name: Generate dashboard HTML
         env:
           HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          LIGHTDASH_TOKEN: ${{ secrets.LIGHTDASH_TOKEN }}
         run: python scripts/generate.py
 
       - name: Commit if changed
