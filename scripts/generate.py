@@ -338,14 +338,10 @@ def build_dashboard_data(deals: list[dict], _insights_data: dict) -> dict[str, A
         }
     logos = sorted(won_by_company.values(), key=lambda x: x["close"], reverse=True)
 
-    # ---- Q2 won = unique companies with any Won HS deal in Q2 (Sales OR Customer) ----
-    q2_won_companies: set = set()
-    for d in won:
-        close = (d["properties"].get("closedate") or "")[:10]
-        if Q2_START <= close <= Q2_END:
-            co_id = d["properties"].get("_company_id") or d["properties"].get("_company_name")
-            q2_won_companies.add(co_id)
-    q2_won = len(q2_won_companies)
+    # ---- Logos toward Q2 target = total unique HS-won companies to date ----
+    # The target (15) is to BE AT 15 logos by end of Q2, not booked specifically during Q2.
+    # So this counts cumulative existing HS logos (same as len(logos)).
+    q2_won = len(logos)
 
     q2_lost = sum(
         1 for d in lost
