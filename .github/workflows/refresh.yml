@@ -53,8 +53,18 @@ jobs:
           if [[ -n "$(git status --porcelain docs/)" ]]; then
             git add docs/
             git commit -m "chore: refresh dashboard $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
-            echo "✓ Dashboard updated and committed"
+            # Retry push up to 3 times — race-safe against concurrent refresh runs
+            for attempt in 1 2 3; do
+              git pull --rebase -X ours origin main || true
+              if git push; then
+                echo "✓ Dashboard updated and committed (attempt $attempt)"
+                exit 0
+              fi
+              echo "Push rejected, retrying in 2s…"
+              sleep 2
+            done
+            echo "✗ Push failed after 3 attempts"
+            exit 1
           else
             echo "✓ No data changes — skipping commit"
           fi
