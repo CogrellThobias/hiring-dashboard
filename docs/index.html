@@ -498,10 +498,32 @@ function unlockDashboard() {
   if (d) d.style.display = '';
 }
 
-// Unlock if any auth flag exists in localStorage (backwards compat with old hash)
+// Tiny URL query param reader (works on every browser, no URLSearchParams dep)
+function getQueryParam(name) {
+  var s = window.location.search;
+  if (!s) return null;
+  var pairs = s.substring(1).split('&');
+  for (var i = 0; i < pairs.length; i++) {
+    var kv = pairs[i].split('=');
+    if (decodeURIComponent(kv[0]) === name) return decodeURIComponent(kv[1] || '');
+  }
+  return null;
+}
+
+// 1) Already authed → unlock immediately
 if (localStorage.getItem(STORAGE_KEY)) {
   unlockDashboard();
-} else {
+}
+// 2) URL contains ?unlock=Hillclimb2026 → auto-unlock, persist, clean URL
+else if (getQueryParam('unlock') === AUTH_CODE) {
+  try { localStorage.setItem(STORAGE_KEY, '1'); } catch (_) {}
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+  unlockDashboard();
+}
+// 3) Otherwise show the input form
+else {
   var form  = document.getElementById('gateForm');
   var input = document.getElementById('gateInput');
   var errEl = document.getElementById('gateError');
