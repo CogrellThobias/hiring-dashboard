@@ -514,8 +514,8 @@ function getQueryParam(name) {
 if (localStorage.getItem(STORAGE_KEY)) {
   unlockDashboard();
 }
-// 2) URL contains ?unlock=Hillclimb2026 → auto-unlock, persist, clean URL
-else if (getQueryParam('unlock') === AUTH_CODE) {
+// 2) URL contains ?unlock=Hillclimb2026 OR ?go → auto-unlock, persist, clean URL
+else if (getQueryParam('unlock') === AUTH_CODE || getQueryParam('go') !== null) {
   try { localStorage.setItem(STORAGE_KEY, '1'); } catch (_) {}
   if (window.history && window.history.replaceState) {
     window.history.replaceState({}, document.title, window.location.pathname);
