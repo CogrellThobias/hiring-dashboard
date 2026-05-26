@@ -292,6 +292,24 @@
     border-color: var(--coral-900);
     box-shadow: 0 0 0 4px rgba(255, 108, 159, 0.14);
   }
+  .gate-button {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(180deg, var(--coral-900) 0%, var(--coral-800) 100%);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 4px 12px rgba(255, 108, 159, 0.28), 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+    -webkit-appearance: none;
+  }
+  .gate-button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(255, 108, 159, 0.4), 0 1px 0 rgba(255, 255, 255, 0.4) inset; }
+  .gate-button:active { transform: translateY(0); opacity: 0.92; }
   .gate-input.error { border-color: var(--coral-700); animation: shake 0.4s ease; }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
@@ -330,6 +348,7 @@
         spellcheck="false"
         autofocus
       />
+      <button type="submit" class="gate-button">Unlock</button>
       <div class="gate-error" id="gateError">&nbsp;</div>
     </form>
   </div>
@@ -506,7 +525,7 @@ if (localStorage.getItem(STORAGE_KEY) === AUTH_HASH) {
 
 // =========== INJECTED DATA ===========
 const DATA = {
-  "generated_at": "2026-05-26T07:00:49.529137+00:00",
+  "generated_at": "2026-05-26T07:01:53.181287+00:00",
   "q2_target": 15,
   "q2_won": 4,
   "q2_lost": 11,
