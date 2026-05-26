@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --grey-50: #FBFBF9;
@@ -151,7 +150,14 @@
   .hero-number .accent { color: var(--coral-900); font-style: normal; }
   .progress { position: relative; height: 10px; background: rgba(26, 26, 26, 0.06); border-radius: 999px; overflow: hidden; box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04) inset; margin-top: 8px; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, var(--coral-900) 0%, var(--coral-800) 100%); border-radius: 999px; box-shadow: 0 0 14px rgba(255, 108, 159, 0.4); transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .insights-chart { flex: 1; position: relative; min-height: 0; }
+  .insights-chart { flex: 1; position: relative; min-height: 0; display: flex; align-items: stretch; padding-top: 12px; }
+  .bars-months { display: flex; flex: 1; gap: 10px; align-items: stretch; }
+  .bars-month  { flex: 1 1 0; display: flex; flex-direction: column; min-width: 0; }
+  .bars-bars   { flex: 1 1 auto; display: flex; align-items: flex-end; gap: 5px; min-height: 0; padding-bottom: 4px; border-bottom: 1px solid rgba(26, 26, 26, 0.08); }
+  .bars-bar    { flex: 1 1 0; min-width: 0; border-radius: 4px 4px 0 0; transition: height 0.6s ease; }
+  .bars-bar.jobs  { background: var(--coral-900); }
+  .bars-bar.hires { background: var(--grey-800); }
+  .bars-label  { font-size: 11px; color: var(--text-muted); font-weight: 500; text-align: center; padding-top: 6px; letter-spacing: 0.02em; }
   .insights-legend { display: flex; gap: 16px; margin-bottom: 8px; padding: 0 4px; }
   .legend-item { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-soft); font-weight: 500; letter-spacing: 0.02em; }
   .legend-item .swatch { width: 10px; height: 10px; border-radius: 3px; }
@@ -437,9 +443,7 @@
         <span class="legend-item jobs"><span class="swatch"></span>HS Jobs <strong id="totJobs">—</strong></span>
         <span class="legend-item hires"><span class="swatch"></span>HS Hires <strong id="totHires">—</strong></span>
       </div>
-      <div class="insights-chart">
-        <canvas id="insightsCanvas"></canvas>
-      </div>
+      <div class="insights-chart" id="insightsBars"></div>
     </div>
     </div>
     <div class="col col-3">
@@ -666,37 +670,41 @@ document.getElementById('dealTotal').textContent = fmtFull(dealTotalArr) + ' SEK
 document.getElementById('dealAvg').textContent = 'avg ' + fmt(dealAvgArr) + ' SEK per deal';
 
 // Product Insights chart
-document.getElementById('totJobs').textContent = insightsData.jobs.reduce((s,v)=>s+v, 0);
-document.getElementById('totHires').textContent = insightsData.hires.reduce((s,v)=>s+v, 0);
-const insightsCtx = document.getElementById('insightsCanvas').getContext('2d');
-new Chart(insightsCtx, {
-  type: 'bar',
-  data: {
-    labels: insightsData.labels,
-    datasets: [
-      { label: 'HS Jobs',  data: insightsData.jobs,  backgroundColor: '#FF6C9F', borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.65 },
-      { label: 'HS Hires', data: insightsData.hires, backgroundColor: '#43413F', borderRadius: 6, barPercentage: 0.7, categoryPercentage: 0.65 },
-    ],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: { padding: { top: 16, right: 4, bottom: 4, left: 4 } },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 26, 26, 0.92)',
-        titleFont: { family: "'Inter', sans-serif", size: 12, weight: '600' },
-        bodyFont:  { family: "'Inter', sans-serif", size: 12 },
-        padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4,
-      },
-    },
-    scales: {
-      x: { grid: { display: false, drawBorder: false }, ticks: { color: '#6A6862', font: { family: "'Inter', sans-serif", size: 12, weight: '500' } } },
-      y: { grid: { color: 'rgba(26, 26, 26, 0.06)', drawBorder: false }, ticks: { color: '#928E85', font: { family: "'Inter', sans-serif", size: 11 }, stepSize: 25 }, beginAtZero: true },
-    },
-  },
-});
+try {
+  document.getElementById('totJobs').textContent = insightsData.jobs.reduce(function(s,v){return s+v;}, 0);
+  document.getElementById('totHires').textContent = insightsData.hires.reduce(function(s,v){return s+v;}, 0);
+
+  // Render HTML bars (no canvas/Chart.js dep — works on smart-TV browsers)
+  var maxVal = Math.max.apply(null, insightsData.jobs.concat(insightsData.hires).concat([1]));
+  var barsRoot = document.getElementById('insightsBars');
+  if (barsRoot) {
+    var monthsWrap = document.createElement('div');
+    monthsWrap.className = 'bars-months';
+    for (var i = 0; i < insightsData.labels.length; i++) {
+      var m = document.createElement('div');
+      m.className = 'bars-month';
+      var bars = document.createElement('div');
+      bars.className = 'bars-bars';
+      var jobsBar = document.createElement('div');
+      jobsBar.className = 'bars-bar jobs';
+      jobsBar.style.height = ((insightsData.jobs[i] / maxVal) * 100).toFixed(1) + '%';
+      jobsBar.title = 'HS Jobs: ' + insightsData.jobs[i];
+      var hiresBar = document.createElement('div');
+      hiresBar.className = 'bars-bar hires';
+      hiresBar.style.height = ((insightsData.hires[i] / maxVal) * 100).toFixed(1) + '%';
+      hiresBar.title = 'HS Hires: ' + insightsData.hires[i];
+      bars.appendChild(jobsBar);
+      bars.appendChild(hiresBar);
+      var lbl = document.createElement('div');
+      lbl.className = 'bars-label';
+      lbl.textContent = insightsData.labels[i];
+      m.appendChild(bars);
+      m.appendChild(lbl);
+      monthsWrap.appendChild(m);
+    }
+    barsRoot.appendChild(monthsWrap);
+  }
+} catch (e) { /* never let insights kill the rest */ }
 
 // Pipe Movement
 const pm = DATA.pipe_movement || {today: 0, week: {current:0, previous:0, delta_pct:null}, month: {current:0, previous:0, delta_pct:null}};
