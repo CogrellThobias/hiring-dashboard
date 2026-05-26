@@ -486,41 +486,47 @@
 
 <script>
 // =========== AUTH GATE ===========
-const AUTH_HASH = '4d98d2b78d87b7b466f94eb66b1f810c276498061c0f1f02a8c6a414d8b200b9';
-const STORAGE_KEY = 'hs-dashboard-auth';
-
-async function sha256(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+// Plaintext compare (Web Crypto not always available on smart-TV browsers).
+// Source is public anyway so hashing adds no real security here.
+var AUTH_CODE = 'Hillclimb2026';
+var STORAGE_KEY = 'hs-dashboard-auth';
 
 function unlockDashboard() {
-  document.getElementById('authGate').classList.add('hidden');
-  document.getElementById('dashRoot').style.display = '';
+  var g = document.getElementById('authGate');
+  if (g) g.classList.add('hidden');
+  var d = document.getElementById('dashRoot');
+  if (d) d.style.display = '';
 }
 
-// Skip gate if already authed on this device
-if (localStorage.getItem(STORAGE_KEY) === AUTH_HASH) {
+// Unlock if any auth flag exists in localStorage (backwards compat with old hash)
+if (localStorage.getItem(STORAGE_KEY)) {
   unlockDashboard();
 } else {
-  const form = document.getElementById('gateForm');
-  const input = document.getElementById('gateInput');
-  const errEl = document.getElementById('gateError');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const h = await sha256(input.value);
-    if (h === AUTH_HASH) {
-      localStorage.setItem(STORAGE_KEY, AUTH_HASH);
-      errEl.textContent = ' ';
-      input.classList.remove('error');
-      unlockDashboard();
-    } else {
-      errEl.textContent = 'Incorrect code';
-      input.classList.add('error');
-      setTimeout(() => input.classList.remove('error'), 600);
-      input.select();
+  var form  = document.getElementById('gateForm');
+  var input = document.getElementById('gateInput');
+  var errEl = document.getElementById('gateError');
+  var btn   = form && form.querySelector('button[type="submit"]');
+
+  function tryUnlock() {
+    try {
+      if (input.value === AUTH_CODE) {
+        try { localStorage.setItem(STORAGE_KEY, '1'); } catch (_) {}
+        errEl.textContent = '';
+        input.classList.remove('error');
+        unlockDashboard();
+      } else {
+        errEl.textContent = 'Incorrect code';
+        input.classList.add('error');
+        setTimeout(function() { input.classList.remove('error'); }, 600);
+        if (input.select) input.select();
+      }
+    } catch (err) {
+      errEl.textContent = 'Error: ' + (err && err.message ? err.message : err);
     }
-  });
+  }
+
+  if (form) form.addEventListener('submit', function(e) { e.preventDefault(); tryUnlock(); });
+  if (btn)  btn.addEventListener('click',  function(e) { e.preventDefault(); tryUnlock(); });
 }
 
 // =========== INJECTED DATA ===========
