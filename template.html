@@ -85,11 +85,13 @@
   }
   .dash {
     height: 100vh;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
+    display: flex;
+    flex-direction: column;
     padding: 36px 44px 28px;
     gap: 24px;
   }
+  .dash > header { flex: 0 0 auto; }
+  .dash > footer { flex: 0 0 auto; }
   header {
     display: flex;
     justify-content: space-between;
@@ -108,13 +110,12 @@
   .live { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; color: var(--grey-800); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 600; padding: 5px 12px; background: var(--surface-strong); border: 1px solid var(--border); border-radius: 999px; backdrop-filter: blur(20px); }
   .live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--coral-900); box-shadow: 0 0 8px var(--coral-900); animation: pulse 2.4s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
-  .main { display: grid; grid-template-columns: 1.35fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 22px; min-height: 0; }
-  .hero       { grid-column: 1; grid-row: 1; }
-  .next-close { grid-column: 1; grid-row: 2; }
-  .logos      { grid-column: 2; grid-row: 1; }
-  .insights   { grid-column: 2; grid-row: 2; }
-  .pipeline   { grid-column: 3; grid-row: 1; }
-  .pipemove   { grid-column: 3; grid-row: 2; }
+  .main { display: flex; gap: 22px; flex: 1 1 auto; min-height: 0; }
+  .col  { display: flex; flex-direction: column; gap: 22px; min-width: 0; min-height: 0; }
+  .col-1 { flex: 1.35 1.35 0; }
+  .col-2 { flex: 1 1 0; }
+  .col-3 { flex: 1 1 0; }
+  .col > .glass { flex: 1 1 0; min-height: 0; }
   .glass {
     background: var(--surface);
     backdrop-filter: blur(40px) saturate(160%);
@@ -160,7 +161,10 @@
 
   /* Pipe movement */
   .pm-grid { display: flex; flex-direction: column; gap: 12px; flex: 1; justify-content: space-around; }
-  .pm-stat { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 14px; }
+  .pm-stat { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 14px; }
+  .pm-stat .pm-num { flex: 0 0 auto; }
+  .pm-stat .pm-meta { flex: 1 1 auto; min-width: 0; }
+  .pm-stat .pm-delta { flex: 0 0 auto; }
   .pm-num { font-family: var(--serif); font-size: 36px; font-weight: 500; line-height: 1; letter-spacing: -0.03em; color: var(--text); min-width: 48px; text-align: left; }
   .pm-meta { display: flex; flex-direction: column; gap: 3px; }
   .pm-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); font-weight: 600; }
@@ -171,7 +175,10 @@
   .pm-delta.flat { color: var(--text-muted); background: rgba(106, 104, 98, 0.1); }
 
   .deal-list { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
-  .deal-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 14px; padding: 10px 14px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 12px; }
+  .deal-row { display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 12px; }
+  .deal-row .deal-main { flex: 1 1 auto; min-width: 0; }
+  .deal-row .stage-chip { flex: 0 0 auto; }
+  .deal-row .deal-arr { flex: 0 0 auto; }
   .deal-row .deal-main { min-width: 0; }
   .deal-row .deal-name { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .deal-row .deal-date { font-size: 10px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.02em; font-weight: 500; }
@@ -188,7 +195,10 @@
   .deal-total .deal-total-sub { font-family: var(--sans); font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
   .logos .card-head { margin-bottom: 12px; }
   .logo-list { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; }
-  .logo-row { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 10px; padding: 6px 11px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 10px; transition: all 0.3s ease; }
+  .logo-row { display: flex; align-items: center; gap: 10px; padding: 6px 11px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 10px; transition: all 0.3s ease; }
+  .logo-row .rank { flex: 0 0 20px; }
+  .logo-row > div:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+  .logo-row .arr { flex: 0 0 auto; }
   .logo-row:hover { background: rgba(255, 255, 255, 0.75); transform: translateX(2px); }
   .logo-row .rank { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--coral-900); font-weight: 500; text-align: center; line-height: 1; }
   .logo-row .name { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
@@ -374,7 +384,8 @@
   </header>
 
   <div class="main">
-    <div class="glass hero">
+    <div class="col col-1">
+      <div class="glass hero">
       <div class="card-head">
         <div class="card-title">Logos vs Target · End of Q2</div>
         <div class="pill">Goal by 30 Jun</div>
@@ -390,8 +401,7 @@
         </div>
       </div>
     </div>
-
-    <div class="glass next-close">
+      <div class="glass next-close">
       <div class="card-head">
         <div class="card-title">Open Deals with Close Date in Q2</div>
         <div class="pill" id="q2DealsPill">0 deals</div>
@@ -405,8 +415,9 @@
         </div>
       </div>
     </div>
-
-    <div class="glass logos">
+    </div>
+    <div class="col col-2">
+      <div class="glass logos">
       <div class="card-head">
         <div class="card-title">Existing Hiring System Logos</div>
         <div class="pill" id="logoCount">0 customers</div>
@@ -417,20 +428,7 @@
         <div class="v" id="logoTotal">—</div>
       </div>
     </div>
-
-    <div class="glass pipeline">
-      <div class="card-head">
-        <div class="card-title">Open Pipeline · Hiring System</div>
-        <div class="pill" id="pipeCount">0 open deals</div>
-      </div>
-      <div class="stage-list" id="stageList"></div>
-      <div class="pipe-total">
-        <div class="l">Potential ARR</div>
-        <div class="v" id="pipeTotal">—</div>
-      </div>
-    </div>
-
-    <div class="glass insights">
+      <div class="glass insights">
       <div class="card-head">
         <div class="card-title">Product Insights · MoM</div>
         <div class="pill">Active subscriptions</div>
@@ -443,8 +441,20 @@
         <canvas id="insightsCanvas"></canvas>
       </div>
     </div>
-
-    <div class="glass pipemove">
+    </div>
+    <div class="col col-3">
+      <div class="glass pipeline">
+      <div class="card-head">
+        <div class="card-title">Open Pipeline · Hiring System</div>
+        <div class="pill" id="pipeCount">0 open deals</div>
+      </div>
+      <div class="stage-list" id="stageList"></div>
+      <div class="pipe-total">
+        <div class="l">Potential ARR</div>
+        <div class="v" id="pipeTotal">—</div>
+      </div>
+    </div>
+      <div class="glass pipemove">
       <div class="card-head">
         <div class="card-title">Meetings Booked</div>
         <div class="pill">New HS meetings</div>
@@ -475,6 +485,7 @@
           <span class="pm-delta flat" id="pmMonthDelta">—</span>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
