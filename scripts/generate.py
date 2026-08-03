@@ -81,9 +81,9 @@ OPEN_STAGE_ORDER = [
     "Contract Sent",
 ]
 
-Q2_START = "2026-04-01"
-Q2_END   = "2026-06-30"
-Q2_TARGET = 15
+Q2_START = "2026-07-01"
+Q2_END   = "2026-09-30"
+Q2_TARGET = 40
 
 # ============================================================
 # STATIC LIGHTDASH SNAPSHOT
@@ -338,9 +338,9 @@ def build_dashboard_data(deals: list[dict], _insights_data: dict) -> dict[str, A
         }
     logos = sorted(won_by_company.values(), key=lambda x: x["close"], reverse=True)
 
-    # ---- Logos toward Q2 target = total unique HS-won companies to date ----
-    # The target (15) is to BE AT 15 logos by end of Q2, not booked specifically during Q2.
-    # So this counts cumulative existing HS logos (same as len(logos)).
+    # ---- Logos toward quarterly target = total unique HS-won companies to date ----
+    # The target (Q2_TARGET) is to BE AT that many logos by end of the quarter,
+    # not booked specifically during it. So this counts cumulative existing HS logos.
     q2_won = len(logos)
 
     q2_lost = sum(
