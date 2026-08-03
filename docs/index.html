@@ -400,7 +400,7 @@
         <div class="hero-label">Total Hiring System logos</div>
         <div class="hero-number">
           <span class="big" id="hWon">0</span>
-          <span class="target">/ <span class="accent">15</span></span>
+          <span class="target">/ <span class="accent" id="hTarget">40</span></span>
         </div>
         <div class="progress">
           <div class="progress-fill" id="hBar" style="width: 0%"></div>
@@ -568,7 +568,7 @@ else {
 
 // =========== INJECTED DATA ===========
 const DATA = {
-  "generated_at": "2026-08-03T14:10:42.079785+00:00",
+  "generated_at": "2026-08-03T14:11:10.669569+00:00",
   "q2_target": 40,
   "q2_won": 12,
   "q2_lost": 1,
@@ -796,6 +796,8 @@ const fmtFull = v => Math.round(v).toLocaleString('en-US');
 
 // Hero
 document.getElementById('hWon').textContent = q2Won;
+var hTargetEl = document.getElementById('hTarget');
+if (hTargetEl) hTargetEl.textContent = Q2_TARGET;
 setTimeout(() => {
   document.getElementById('hBar').style.width = ((q2Won / Q2_TARGET) * 100).toFixed(1) + '%';
 }, 120);
