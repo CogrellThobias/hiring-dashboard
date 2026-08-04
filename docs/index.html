@@ -200,7 +200,12 @@
   .deal-total #dealTotal { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -0.02em; color: var(--coral-900); line-height: 1; }
   .deal-total .deal-total-sub { font-family: var(--sans); font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
   .logos .card-head { margin-bottom: 12px; }
-  .logo-list { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; }
+  .logo-list { display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .logo-row--more { background: rgba(255, 255, 255, 0.3); border-style: dashed; }
+  .logo-row--more .name { color: var(--text-soft); font-style: italic; font-family: var(--serif); font-weight: 500; }
+  .logo-row--more .rank { color: var(--text-muted); font-style: normal; }
+  .deal-row--more { background: rgba(255, 255, 255, 0.3); border-style: dashed; }
+  .deal-row--more .deal-name { color: var(--text-soft); font-style: italic; font-family: var(--serif); font-weight: 500; }
   .logo-row { display: flex; align-items: center; gap: 10px; padding: 6px 11px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); border-radius: 10px; transition: all 0.3s ease; }
   .logo-row .rank { flex: 0 0 20px; }
   .logo-row > div:nth-child(2) { flex: 1 1 auto; min-width: 0; }
@@ -568,7 +573,7 @@ else {
 
 // =========== INJECTED DATA ===========
 const DATA = {
-  "generated_at": "2026-08-04T09:01:02.328927+00:00",
+  "generated_at": "2026-08-04T09:07:09.918863+00:00",
   "q2_target": 40,
   "q2_won": 12,
   "q2_lost": 1,
@@ -802,26 +807,37 @@ setTimeout(() => {
   document.getElementById('hBar').style.width = ((q2Won / Q2_TARGET) * 100).toFixed(1) + '%';
 }, 120);
 
-// Logos
-const logoList = document.getElementById('logoList');
-const romans = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
-logos.forEach((l, i) => {
-  const div = document.createElement('div');
+// Logos — cap visible rows so old-TV browsers never overflow the card
+var LOGO_LIMIT = 5;
+var logoList = document.getElementById('logoList');
+var romans = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
+var visibleLogos = logos.slice(0, LOGO_LIMIT);
+var extraLogosCount = Math.max(logos.length - LOGO_LIMIT, 0);
+var extraLogosArr   = logos.slice(LOGO_LIMIT).reduce(function(s,l){return s+l.arr;}, 0);
+
+visibleLogos.forEach(function(l, i) {
+  var div = document.createElement('div');
   div.className = 'logo-row';
-  div.innerHTML = `
-    <div class="rank">${romans[i] || (i+1)}</div>
-    <div>
-      <div class="name">${l.company}</div>
-      <div class="meta-sm">Closed ${l.close}</div>
-    </div>
-    <div class="arr">
-      ${fmtFull(l.arr)}
-      <small>SEK</small>
-    </div>`;
+  div.innerHTML =
+    '<div class="rank">' + (romans[i] || (i+1)) + '</div>' +
+    '<div>' +
+      '<div class="name">' + l.company + '</div>' +
+      '<div class="meta-sm">Closed ' + l.close + '</div>' +
+    '</div>' +
+    '<div class="arr">' + fmtFull(l.arr) + '<small>SEK</small></div>';
   logoList.appendChild(div);
 });
+if (extraLogosCount > 0) {
+  var more = document.createElement('div');
+  more.className = 'logo-row logo-row--more';
+  more.innerHTML =
+    '<div class="rank">+</div>' +
+    '<div><div class="name">' + extraLogosCount + ' more customers</div></div>' +
+    '<div class="arr">' + fmtFull(extraLogosArr) + '<small>SEK</small></div>';
+  logoList.appendChild(more);
+}
 document.getElementById('logoCount').textContent = logos.length + ' customers';
-document.getElementById('logoTotal').textContent = fmtFull(logos.reduce((s,l)=>s+l.arr, 0)) + ' SEK';
+document.getElementById('logoTotal').textContent = fmtFull(logos.reduce(function(s,l){return s+l.arr;}, 0)) + ' SEK';
 
 // Pipeline
 const stageList = document.getElementById('stageList');
@@ -860,19 +876,36 @@ const stageShort = {
   'Solution Presented':  'Solution Presented',
   'Proposal Sent':       'Proposal Sent',
 };
-const dealList = document.getElementById('dealList');
-upcomingDeals.forEach(d => {
-  const div = document.createElement('div');
+var DEAL_LIMIT = 5;
+var dealList = document.getElementById('dealList');
+var visibleDeals = upcomingDeals.slice(0, DEAL_LIMIT);
+var extraDealsCount = Math.max(upcomingDeals.length - DEAL_LIMIT, 0);
+var extraDealsArr   = upcomingDeals.slice(DEAL_LIMIT).reduce(function(s,d){return s+d.arr;}, 0);
+
+visibleDeals.forEach(function(d) {
+  var div = document.createElement('div');
   div.className = 'deal-row';
-  div.innerHTML = `
-    <div class="deal-main">
-      <div class="deal-name">${d.company}</div>
-      <div class="deal-date">Expected ${d.close}</div>
-    </div>
-    <span class="stage-chip ${stageToClass[d.stage] || 'meeting'}">${stageShort[d.stage] || d.stage}</span>
-    <div class="deal-arr">${fmt(d.arr)} SEK</div>`;
+  div.innerHTML =
+    '<div class="deal-main">' +
+      '<div class="deal-name">' + d.company + '</div>' +
+      '<div class="deal-date">Expected ' + d.close + '</div>' +
+    '</div>' +
+    '<span class="stage-chip ' + (stageToClass[d.stage] || 'meeting') + '">' + (stageShort[d.stage] || d.stage) + '</span>' +
+    '<div class="deal-arr">' + fmt(d.arr) + ' SEK</div>';
   dealList.appendChild(div);
 });
+if (extraDealsCount > 0) {
+  var moreD = document.createElement('div');
+  moreD.className = 'deal-row deal-row--more';
+  moreD.innerHTML =
+    '<div class="deal-main">' +
+      '<div class="deal-name">+ ' + extraDealsCount + ' more deals</div>' +
+      '<div class="deal-date">Closing in Q3</div>' +
+    '</div>' +
+    '<span></span>' +
+    '<div class="deal-arr">' + fmt(extraDealsArr) + ' SEK</div>';
+  dealList.appendChild(moreD);
+}
 const dealTotalArr = upcomingDeals.reduce((s, d) => s + d.arr, 0);
 const dealAvgArr  = dealTotalArr / Math.max(upcomingDeals.length, 1);
 document.getElementById('q2DealsPill').textContent = upcomingDeals.length + ' deals';
