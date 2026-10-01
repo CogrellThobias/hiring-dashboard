@@ -81,9 +81,9 @@ OPEN_STAGE_ORDER = [
     "Contract Sent",
 ]
 
-Q2_START = "2026-07-01"
-Q2_END   = "2026-09-30"
-Q2_TARGET = 40
+Q2_START = "2026-10-01"
+Q2_END   = "2026-12-31"
+Q2_TARGET = 120
 
 # ============================================================
 # STATIC LIGHTDASH SNAPSHOT
